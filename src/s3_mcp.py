@@ -1,20 +1,18 @@
-#!/usr/bin/env python3
 """
 S3 MCP Server - Access AWS S3 resources using boto3.
 
 This server provides access to S3 functionality through
 the Model Context Protocol (MCP), enabling AI assistants and other tools to
 interact with AWS S3.
-
 """
 
 import json
 import logging
 import os
-from typing import Any, Optional
+from typing import Any, Dict, Optional, Union
 
 import boto3
-from botocore.client import BaseClient  # Import BaseClient for type hinting
+from botocore.client import BaseClient
 from botocore.exceptions import NoCredentialsError
 from dotenv import load_dotenv
 from fastmcp import FastMCP
@@ -40,7 +38,7 @@ def get_s3_client() -> BaseClient:
     """Get or create the S3 boto3 client.
 
     Returns:
-        boto3.client: S3 client
+        BaseClient: S3 client
 
     Raises:
         NoCredentialsError: If AWS credentials are not found.
@@ -49,21 +47,16 @@ def get_s3_client() -> BaseClient:
 
     if s3_client is None:
         logger.info("Initializing S3 client")
-        # boto3 will automatically look for credentials in environment variables
-        # (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY) or other configuration.
         try:
             s3_client = boto3.client("s3")
-            # A simple check to see if credentials are valid by making a low-impact call
-            s3_client.list_buckets()
+            s3_client.list_buckets()  # Validate credentials
             logger.info("Successfully initialized and validated S3 client.")
-        except NoCredentialsError:
-            logger.error("Failed to find AWS credentials. Please configure them.")
-            raise
+        except NoCredentialsError as e:
+            logger.error("AWS credentials not found.")
+            raise e
         except Exception as e:
-            logger.error(
-                f"An unexpected error occurred during S3 client initialization: {e}"
-            )
-            raise
+            logger.error(f"Unexpected error initializing S3 client: {e}")
+            raise e
 
     return s3_client
 
@@ -72,7 +65,7 @@ def format_response(data: Any) -> str:
     """Format response data as JSON string.
 
     Args:
-        data: Data to format
+        data (Any): Data to format
 
     Returns:
         str: JSON formatted string
@@ -81,8 +74,12 @@ def format_response(data: Any) -> str:
 
 
 # BUCKET MANAGEMENT
-def _list_buckets_logic() -> dict:
-    """Core logic to list S3 buckets."""
+def _list_buckets_logic() -> Dict[str, Any]:
+    """Core logic to list S3 buckets.
+
+    Returns:
+        Dict[str, Any]: Raw boto3 response from list_buckets.
+    """
     client = get_s3_client()
     return client.list_buckets()
 
@@ -98,18 +95,66 @@ def list_buckets() -> str:
     return format_response(result)
 
 
-def main():
-    """Main entry point for uv execution."""
-    logger.info("Starting S3 MCP Server")
+# OBJECT MANAGEMENT
+def _put_object_logic(
+    bucket: str,
+    key: str,
+    body: Union[str, bytes],
+) -> Dict[str, Any]:
+    """Core logic to put an object into an S3 bucket.
 
-    # Log configuration
-    aws_region = os.getenv("AWS_DEFAULT_REGION", "Not specified (will use default)")
+    Args:
+        bucket (str): The S3 bucket name.
+        key (str): The S3 object key.
+        body (Union[str, bytes]): The content or file path.
+
+    Returns:
+        Dict[str, Any]: Raw boto3 response from put_object.
+    """
+    client = get_s3_client()
+    params: Dict[str, Any] = {"Bucket": bucket, "Key": key}
+
+    if isinstance(body, str) and os.path.exists(body) and os.path.isfile(body):
+        with open(body, "rb") as f:
+            params["Body"] = f.read()
+    elif isinstance(body, str):
+        params["Body"] = body.encode("utf-8")
+    else:
+        params["Body"] = body  # Assuming bytes or file-like object
+
+    return client.put_object(**params)
+
+
+@mcp.tool()
+def put_object(
+    bucket: str,
+    key: str,
+    body: str,
+) -> str:
+    """Puts an object into an S3 bucket.
+
+    Args:
+        bucket (str): The name of the bucket.
+        key (str): The key (name) of the object.
+        body (str): The content of the object or absolute file path.
+
+    Returns:
+        str: JSON formatted S3 response.
+    """
+    result = _put_object_logic(bucket=bucket, key=key, body=body)
+    return format_response(result)
+
+
+def main() -> None:
+    """Main entry point for execution."""
+    logger.info("Starting S3 MCP Server")
+    aws_region = os.getenv("AWS_DEFAULT_REGION", "Not specified (using default)")
     logger.info(f"AWS Region: {aws_region}")
 
     try:
         mcp.run()
     except KeyboardInterrupt:
-        logger.info("Server stopped by user")
+        logger.info("Server stopped by user.")
     except Exception as e:
         logger.error(f"Server error: {e}")
         raise
