@@ -270,6 +270,111 @@ def list_objects_v2(
     return format_response(result)
 
 
+def _head_object_logic(
+    bucket: str,
+    key: str,
+    if_match: Optional[str] = None,
+    if_none_match: Optional[str] = None,
+    version_id: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Core logic to retrieve metadata from an object.
+
+    Args:
+        bucket (str): The S3 bucket name.
+        key (str): The S3 object key.
+        if_match (Optional[str]): Return object only if its ETag is the same.
+        if_none_match (Optional[str]): Return object only if its ETag is different.
+        version_id (Optional[str]): Version of the object.
+
+    Returns:
+        Dict[str, Any]: Raw boto3 response from head_object.
+    """
+    client = get_s3_client()
+    params: Dict[str, Any] = {"Bucket": bucket, "Key": key}
+    if if_match:
+        params["IfMatch"] = if_match
+    if if_none_match:
+        params["IfNoneMatch"] = if_none_match
+    if version_id:
+        params["VersionId"] = version_id
+    return client.head_object(**params)
+
+
+@mcp.tool()
+def head_object(
+    bucket: str,
+    key: str,
+    if_match: Optional[str] = None,
+    if_none_match: Optional[str] = None,
+    version_id: Optional[str] = None,
+) -> str:
+    """Retrieves metadata from an object without returning the object itself.
+
+    Args:
+        bucket (str): The name of the bucket.
+        key (str): The key (name) of the object.
+        if_match (Optional[str]): Return object only if its ETag is the same.
+        if_none_match (Optional[str]): Return object only if its ETag is different.
+        version_id (Optional[str]): Version of the object.
+
+    Returns:
+        str: JSON formatted S3 response.
+    """
+    result = _head_object_logic(
+        bucket=bucket,
+        key=key,
+        if_match=if_match,
+        if_none_match=if_none_match,
+        version_id=version_id,
+    )
+    return format_response(result)
+
+
+def _upload_file_logic(
+    filename: str,
+    bucket: str,
+    key: str,
+    extra_args: Optional[Dict[str, Any]] = None,
+) -> None:
+    """Core logic to upload a file to an S3 bucket.
+
+    Args:
+        filename (str): The path to the file to upload.
+        bucket (str): The S3 bucket name.
+        key (str): The S3 object key.
+        extra_args (Optional[Dict[str, Any]]): Extra arguments for the upload.
+    """
+    client = get_s3_client()
+    client.upload_file(
+        Filename=filename,
+        Bucket=bucket,
+        Key=key,
+        ExtraArgs=extra_args,
+    )
+
+
+@mcp.tool()
+def upload_file(
+    filename: str,
+    bucket: str,
+    key: str,
+) -> str:
+    """Uploads a file to an S3 object.
+
+    Args:
+        filename (str): The path to the file to upload.
+        bucket (str): The name of the bucket to upload to.
+        key (str): The name of the key to upload to.
+
+    Returns:
+        str: JSON formatted success message.
+    """
+    _upload_file_logic(filename=filename, bucket=bucket, key=key)
+    return format_response(
+        {"status": "success", "message": f"File '{filename}' uploaded to '{bucket}/{key}'."}
+    )
+
+
 def main() -> None:
     """Main entry point for execution."""
     logger.info("Starting S3 MCP Server")
