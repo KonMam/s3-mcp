@@ -375,6 +375,101 @@ def upload_file(
     )
 
 
+def _download_file_logic(
+    bucket: str,
+    key: str,
+    filename: str,
+) -> None:
+    """Core logic to download an object from an S3 bucket.
+
+    Args:
+        bucket (str): The S3 bucket name.
+        key (str): The S3 object key.
+        filename (str): The local path to download the file to.
+    """
+    client = get_s3_client()
+    client.download_file(
+        Bucket=bucket,
+        Key=key,
+        Filename=filename,
+    )
+
+
+@mcp.tool()
+def download_file(
+    bucket: str,
+    key: str,
+    filename: str,
+) -> str:
+    """Downloads an object from an S3 bucket to a file.
+
+    Args:
+        bucket (str): The name of the bucket to download from.
+        key (str): The name of the key to download from.
+        filename (str): The path to the file to download to.
+
+    Returns:
+        str: JSON formatted success message.
+    """
+    _download_file_logic(bucket=bucket, key=key, filename=filename)
+    return format_response(
+        {"status": "success", "message": f"File '{key}' from bucket '{bucket}' downloaded to '{filename}'."}
+    )
+
+
+def _copy_object_logic(
+    source_bucket: str,
+    source_key: str,
+    destination_bucket: str,
+    destination_key: str,
+) -> Dict[str, Any]:
+    """Core logic to copy an object from one S3 location to another.
+
+    Args:
+        source_bucket (str): The name of the source bucket.
+        source_key (str): The key of the source object.
+        destination_bucket (str): The name of the destination bucket.
+        destination_key (str): The key of the destination object.
+
+    Returns:
+        Dict[str, Any]: Raw boto3 response from copy_object.
+    """
+    client = get_s3_client()
+    copy_source = {'Bucket': source_bucket, 'Key': source_key}
+    return client.copy_object(
+        CopySource=copy_source,
+        Bucket=destination_bucket,
+        Key=destination_key,
+    )
+
+
+@mcp.tool()
+def copy_object(
+    source_bucket: str,
+    source_key: str,
+    destination_bucket: str,
+    destination_key: str,
+) -> str:
+    """Copies an object from one S3 location to another.
+
+    Args:
+        source_bucket (str): The name of the source bucket.
+        source_key (str): The key of the source object.
+        destination_bucket (str): The name of the destination bucket.
+        destination_key (str): The key of the destination object.
+
+    Returns:
+        str: JSON formatted S3 response.
+    """
+    result = _copy_object_logic(
+        source_bucket=source_bucket,
+        source_key=source_key,
+        destination_bucket=destination_bucket,
+        destination_key=destination_key,
+    )
+    return format_response(result)
+
+
 def main() -> None:
     """Main entry point for execution."""
     logger.info("Starting S3 MCP Server")
