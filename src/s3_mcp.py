@@ -145,6 +145,40 @@ def put_object(
     return format_response(result)
 
 
+def _get_object_logic(bucket: str, key: str) -> Dict[str, Any]:
+    """Core logic to get an object from an S3 bucket.
+
+    Args:
+        bucket (str): The S3 bucket name.
+        key (str): The S3 object key.
+
+    Returns:
+        Dict[str, Any]: Raw boto3 response from get_object.
+    """
+    client = get_s3_client()
+    response = client.get_object(Bucket=bucket, Key=key)
+    # The body is a StreamingBody, which is not directly JSON serializable.
+    # We read it and decode it to a string.
+    if 'Body' in response:
+        response['Body'] = response['Body'].read().decode('utf-8')
+    return response
+
+
+@mcp.tool()
+def get_object(bucket: str, key: str) -> str:
+    """Gets an object from an S3 bucket.
+
+    Args:
+        bucket (str): The name of the bucket.
+        key (str): The key (name) of the object.
+
+    Returns:
+        str: JSON formatted S3 response.
+    """
+    result = _get_object_logic(bucket=bucket, key=key)
+    return format_response(result)
+
+
 def main() -> None:
     """Main entry point for execution."""
     logger.info("Starting S3 MCP Server")
