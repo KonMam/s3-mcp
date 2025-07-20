@@ -106,7 +106,7 @@ def _put_object_logic(
     Args:
         bucket (str): The S3 bucket name.
         key (str): The S3 object key.
-        body (Union[str, bytes]): The content or file path.
+        body (Union[str, bytes]): The content of the object.
 
     Returns:
         Dict[str, Any]: Raw boto3 response from put_object.
@@ -114,10 +114,7 @@ def _put_object_logic(
     client = get_s3_client()
     params: Dict[str, Any] = {"Bucket": bucket, "Key": key}
 
-    if isinstance(body, str) and os.path.exists(body) and os.path.isfile(body):
-        with open(body, "rb") as f:
-            params["Body"] = f.read()
-    elif isinstance(body, str):
+    if isinstance(body, str):
         params["Body"] = body.encode("utf-8")
     else:
         params["Body"] = body  # Assuming bytes or file-like object
@@ -136,7 +133,7 @@ def put_object(
     Args:
         bucket (str): The name of the bucket.
         key (str): The key (name) of the object.
-        body (str): The content of the object or absolute file path.
+        body (str): The content of the object.
 
     Returns:
         str: JSON formatted S3 response.
