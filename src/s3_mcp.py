@@ -179,6 +179,35 @@ def get_object(bucket: str, key: str) -> str:
     return format_response(result)
 
 
+def _delete_object_logic(bucket: str, key: str) -> Dict[str, Any]:
+    """Core logic to delete an object from an S3 bucket.
+
+    Args:
+        bucket (str): The S3 bucket name.
+        key (str): The S3 object key.
+
+    Returns:
+        Dict[str, Any]: Raw boto3 response from delete_object.
+    """
+    client = get_s3_client()
+    return client.delete_object(Bucket=bucket, Key=key)
+
+
+@mcp.tool()
+def delete_object(bucket: str, key: str) -> str:
+    """Deletes an object from an S3 bucket.
+
+    Args:
+        bucket (str): The name of the bucket.
+        key (str): The key (name) of the object.
+
+    Returns:
+        str: JSON formatted S3 response.
+    """
+    result = _delete_object_logic(bucket=bucket, key=key)
+    return format_response(result)
+
+
 def main() -> None:
     """Main entry point for execution."""
     logger.info("Starting S3 MCP Server")
