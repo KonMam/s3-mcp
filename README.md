@@ -10,6 +10,17 @@ A Model Context Protocol (MCP) server for AWS S3 integration using FastMCP and b
 ### Bucket Management
 - `list_buckets` - Lists all S3 buckets in the AWS account.
 
+### Object Management
+- `put_object` - Puts an object into an S3 bucket.
+- `get_object` - Gets an object from an S3 bucket.
+- `delete_object` - Deletes an object from an S3 bucket.
+- `list_objects_v2` - Lists objects in an S3 bucket.
+- `head_object` - Retrieves metadata from an object without returning the object itself.
+- `upload_file` - Uploads a file to an S3 object.
+- `download_file` - Downloads an object from an S3 bucket to a file.
+- `copy_object` - Copies an object from one S3 location to another.
+- `delete_objects` - Deletes multiple objects from an S3 bucket.
+
 ## Installation
 
 ### Prerequisites

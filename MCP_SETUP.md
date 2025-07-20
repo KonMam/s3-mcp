@@ -129,9 +129,7 @@ Then use a simpler MCP configuration:
 
 After configuration, restart your MCP client and test with:
 
-```
-List S3 buckets
-```
+`Show me all the S3 buckets I have access to.`
 
 The server should respond with your S3 bucket data.
 
