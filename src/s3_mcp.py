@@ -9,7 +9,7 @@ interact with AWS S3.
 import json
 import logging
 import os
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 import boto3
 from botocore.client import BaseClient
@@ -466,6 +466,54 @@ def copy_object(
         source_key=source_key,
         destination_bucket=destination_bucket,
         destination_key=destination_key,
+    )
+    return format_response(result)
+
+
+def _delete_objects_logic(
+    bucket: str,
+    keys: List[str],
+    quiet: bool = False,
+) -> Dict[str, Any]:
+    """Core logic to delete multiple objects from an S3 bucket.
+
+    Args:
+        bucket (str): The S3 bucket name.
+        keys (List[str]): A list of keys to delete.
+        quiet (bool): Whether to suppress errors and return only failed deletions.
+
+    Returns:
+        Dict[str, Any]: Raw boto3 response from delete_objects.
+    """
+    client = get_s3_client()
+    objects_to_delete = [{'Key': key} for key in keys]
+    delete_payload = {'Objects': objects_to_delete, 'Quiet': quiet}
+    return client.delete_objects(
+        Bucket=bucket,
+        Delete=delete_payload,
+    )
+
+
+@mcp.tool()
+def delete_objects(
+    bucket: str,
+    keys: List[str],
+    quiet: bool = False,
+) -> str:
+    """Deletes multiple objects from an S3 bucket.
+
+    Args:
+        bucket (str): The name of the bucket.
+        keys (List[str]): A list of keys to delete.
+        quiet (bool): Suppress errors and return only failed deletions.
+
+    Returns:
+        str: JSON formatted S3 response.
+    """
+    result = _delete_objects_logic(
+        bucket=bucket,
+        keys=keys,
+        quiet=quiet,
     )
     return format_response(result)
 
