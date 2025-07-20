@@ -208,6 +208,68 @@ def delete_object(bucket: str, key: str) -> str:
     return format_response(result)
 
 
+def _list_objects_v2_logic(
+    bucket: str,
+    prefix: Optional[str] = None,
+    max_keys: Optional[int] = None,
+    continuation_token: Optional[str] = None,
+    delimiter: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Core logic to list objects in an S3 bucket.
+
+    Args:
+        bucket (str): The S3 bucket name.
+        prefix (Optional[str]): Filter for keys starting with this prefix.
+        max_keys (Optional[int]): Maximum number of keys to return.
+        continuation_token (Optional[str]): Token for paginating results.
+        delimiter (Optional[str]): Delimiter for grouping keys.
+
+    Returns:
+        Dict[str, Any]: Raw boto3 response from list_objects_v2.
+    """
+    client = get_s3_client()
+    params: Dict[str, Any] = {"Bucket": bucket}
+    if prefix:
+        params["Prefix"] = prefix
+    if max_keys:
+        params["MaxKeys"] = max_keys
+    if continuation_token:
+        params["ContinuationToken"] = continuation_token
+    if delimiter:
+        params["Delimiter"] = delimiter
+    return client.list_objects_v2(**params)
+
+
+@mcp.tool()
+def list_objects_v2(
+    bucket: str,
+    prefix: Optional[str] = None,
+    max_keys: Optional[int] = None,
+    continuation_token: Optional[str] = None,
+    delimiter: Optional[str] = None,
+) -> str:
+    """Lists objects in an S3 bucket.
+
+    Args:
+        bucket (str): The name of the bucket.
+        prefix (Optional[str]): Filter for keys starting with this prefix.
+        max_keys (Optional[int]): Maximum number of keys to return.
+        continuation_token (Optional[str]): Token for paginating results.
+        delimiter (Optional[str]): Delimiter for grouping keys.
+
+    Returns:
+        str: JSON formatted S3 response.
+    """
+    result = _list_objects_v2_logic(
+        bucket=bucket,
+        prefix=prefix,
+        max_keys=max_keys,
+        continuation_token=continuation_token,
+        delimiter=delimiter,
+    )
+    return format_response(result)
+
+
 def main() -> None:
     """Main entry point for execution."""
     logger.info("Starting S3 MCP Server")
